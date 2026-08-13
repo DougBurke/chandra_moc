@@ -1,0 +1,130 @@
+#!/usr/bin/env python
+
+"""
+Usage:
+
+ ./make_chandra_moc indir outfile --depth=13
+
+Given a directory of FOV files create a MOC.
+
+"""
+
+from itertools import batched
+from pathlib import Path
+
+import numpy as np
+
+import pycrates
+
+from astropy.coordinates import SkyCoord
+import astropy.units as u
+
+from mocpy import MOC
+
+
+def read_fov(infile: Path,
+             max_depth: int = 9
+             ) -> MOC:
+    """Read in the FOV and convert to a celestial AstroPy polygon"""
+
+    # There can be multiple polygons in a FOV file, one per "chip".
+    # Technically there could be something more complex but assume only
+    # "additive" regions here.
+    #
+    cr = pycrates.read_file(str(infile) + "[cols shape,pos,eqpos]")
+
+    # Assume that each row of eqpos uses NaN to mark "missing" data
+    # (i.e. for those rows with a smaller number of points).
+    #
+    shapes = cr.get_column("shape").values
+    eqposes = cr.get_column("eqpos").values
+    mocs = []
+    for shape, eqpos in zip(shapes, eqposes):
+        if shape != "Polygon":
+            raise OSError(f"shape={shape} in {infile}")
+
+        xidx = np.isfinite(eqpos[0])
+        yidx = np.isfinite(eqpos[1])
+        if not (xidx == yidx).all():
+            raise OSError(f"index mis-match in {infile}")
+
+        # ICRS should be a good-enough approimation
+        coords = eqpos[:, xidx].T
+        poly = SkyCoord(coords, unit="deg", frame="icrs")
+        moc = MOC.from_polygon_skycoord(poly, max_depth=max_depth)
+        mocs.append(moc)
+
+    if len(mocs) == 0:
+        raise OSError(f"No MOC found in {infile}")
+
+    if len(mocs) == 1:
+        return mocs[0]
+
+    return mocs[0].union(*mocs[1:])
+
+
+def union_chunk(xs: list[MOC],
+                chunk: int
+                ) -> list[MOC]:
+    """Chunk the input into size of chunk and union each chunk."""
+
+    mocs = []
+    for chunk in batched(xs, chunk):
+        if len(chunk) == 1:
+            mocs.append(chunk[0])
+        else:
+            mocs.append(chunk[0].union(*chunk[1:]))
+
+    return mocs
+
+
+def convert(indir: Path,
+            outfile: Path,
+            max_depth: int = 9,
+            chunk: int = 10
+            ) -> None:
+    """Convert the FOV files in indir and write out a MOC to outfile.
+
+    """
+
+    if not indir.is_dir():
+        raise OSError(f"indir={indir} is not a directory")
+
+    mocs = []
+    for fov in indir.glob("*fov1.fits.gz"):
+        mocs.append(read_fov(fov,max_depth=max_depth))
+
+    if len(mocs) == 0:
+        raise OSError(f"No FOV files found in {indir}")
+
+    # Unioning the MOCs should not depend on order, so chunk the data
+    # to reduce the number if unions.
+    #
+    while True:
+        outs = union_chunk(mocs, chunk)
+        print(f"--- len(mocs) == {len(mocs)} : {len(outs)}")
+        if len(outs) == 1:
+            moc = outs[0]
+            break
+
+        mocs = outs
+
+    moc.write(outfile,overwrite=True)
+    print(f"Created: {outfile}")
+
+
+if __name__ == "__main__":
+
+    import argparse
+    p = argparse.ArgumentParser(
+        prog='make_chandra_moc',
+        description='Convert Chandra FOV files to a MOC')
+
+    p.add_argument('indir')
+    p.add_argument('outfile')
+
+    p.add_argument('--depth', default=13, type=int)
+
+    args = p.parse_args()
+    convert(Path(args.indir), Path(args.outfile),
+            max_depth=args.depth)
