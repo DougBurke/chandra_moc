@@ -61,8 +61,15 @@ The file view_chandra_moc.py takes some of the example code from
 https://cds-astro.github.io/mocpy/_collections/notebooks/FITS-image-pixels-intersecting-MOC.html
 to try and allow some visualization of the MOC.
 
-DS9 8.8 beta 1 and later should be able to view MOCs but I have a ticket
-in to them as it currently does not work.
+DS9 8.8 beta 1 and later should be able to view MOCs but only if they
+are written out as "pre_v2", which the code has been adjusted to do
+(the `--v2` flag will turn this off).
+
+```
+% ds9 d13.fits
+```
+
+![DS9 view](ds9_d13.png)
 
 The `view_moc(infile, ra0, dec0, fov0, ...)` routine will display the MOC
 using matplotlib (this requires that "pip install mocpy[plots]" has been

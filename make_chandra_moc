@@ -3,7 +3,7 @@
 """
 Usage:
 
- ./make_chandra_moc indir outfile --depth=13
+ ./make_chandra_moc indir outfile --depth=13 --v2
 
 Given a directory of FOV files create a MOC.
 
@@ -81,7 +81,8 @@ def union_chunk(xs: list[MOC],
 def convert(indir: Path,
             outfile: Path,
             max_depth: int = 9,
-            chunk: int = 10
+            chunk: int = 10,
+            pre_v2: bool = True,
             ) -> None:
     """Convert the FOV files in indir and write out a MOC to outfile.
 
@@ -109,7 +110,9 @@ def convert(indir: Path,
 
         mocs = outs
 
-    moc.write(outfile,overwrite=True)
+    # Is there a difference between save and write?
+    # moc.write(outfile,overwrite=True, pre_v2=pre_v2)
+    moc.save(outfile,overwrite=True, pre_v2=pre_v2)
     print(f"Created: {outfile}")
 
 
@@ -124,7 +127,8 @@ if __name__ == "__main__":
     p.add_argument('outfile')
 
     p.add_argument('--depth', default=13, type=int)
+    p.add_argument('--v2', action='store_false')
 
     args = p.parse_args()
     convert(Path(args.indir), Path(args.outfile),
-            max_depth=args.depth)
+            max_depth=args.depth, pre_v2=args.v2)
