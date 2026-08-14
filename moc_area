@@ -1,0 +1,29 @@
+#!/usr/bin/env python
+
+"""Report the sky coverage of a MOC."""
+
+import sys
+
+import numpy as np
+
+from astropy import units as u
+
+from mocpy import MOC
+
+ALL_SKY = 4 * np.pi * u.steradian
+
+def calc_area(infile: str) -> None:
+    # See https://cds-astro.github.io/mocpy/examples/user_documentation.html#calculating-a-space-moc-sky-area
+
+    moc = MOC.load(infile, format="fits")
+    area = moc.sky_fraction * ALL_SKY
+    value = area.to(u.deg**2).value
+    print(value)
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        sys.stderr.write(f"Usage: {sys.argv[0]} mocfile\n")
+        sys.exit(1)
+
+    calc_area(sys.argv[1])

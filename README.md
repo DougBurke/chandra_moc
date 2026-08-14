@@ -43,6 +43,17 @@ gzip-compressed version because I was lazy when writing the script) and
 will create the file outfile. The default depth is 13 (which is the value
 used by the Chandra MOC produced by the archive).
 
+# Area
+
+Following
+[Calculate a Smace-MOC sky area](https://cds-astro.github.io/mocpy/examples/user_documentation.html#calculating-a-space-moc-sky-area)
+
+```
+% ./moc_area d9.fits
+4.56365919583572
+% ./moc_area d13.fits
+3.2207074012278123
+```
 
 # Visualization
 
