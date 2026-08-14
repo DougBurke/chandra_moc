@@ -36,7 +36,8 @@ def move_fov(obsid: int) -> None:
 def find(ra: str,
          dec: str,
          radius: str,
-         outdir: Path
+         outdir: Path,
+         allow_grating: bool = False,
             ) -> None:
     """Find all FOV files within the given code and write them to outdir.
 
@@ -65,13 +66,26 @@ def find(ra: str,
     try:
         os.chdir(outdir)
 
-        for idx, obsid in enumerate(matches["ObsId"], 1):
+        for idx, (obsid, grating, simode) in enumerate(zip(matches["ObsId"],
+                                                           matches["Grating"],
+                                                           matches["SIMode"]),
+                                                       1):
 
             # In case duplicates are possible
             if obsid in seen:
                 continue
 
             seen.add(obsid)
+
+            # Do we disallow grating data?
+            if not allow_grating and grating != 'NONE':
+                continue
+
+            # Disallow CC-mode. Should we also drop any non-DEFAULT
+            # settings for HRC data?
+            #
+            if simode.startswith('CC'):
+                continue
 
             data.download_chandra_obsids([obsid], ["fov"])
             move_fov(int(obsid))
@@ -97,12 +111,16 @@ if __name__ == "__main__":
     import argparse
     p = argparse.ArgumentParser(
         prog='find_chandra_fov',
-        description='DOwnload Chandra FOV files to outdir')
+        description='Download Chandra FOV files to outdir')
 
-    p.add_argument('ra')
-    p.add_argument('dec')
-    p.add_argument('radius')
-    p.add_argument('outdir')
+    p.add_argument('ra', help="RA center in decimal degrees")
+    p.add_argument('dec', help="Dec center in decimal degrees")
+    p.add_argument('radius', help="Radius in decimal degrees")
+    p.add_argument('outdir', help="Location to store the FOV files")
+
+    p.add_argument('--grating', action="store_true",
+                   help="Include grating observations")
 
     args = p.parse_args()
-    find(args.ra, args.dec, args.radius, Path(args.outdir))
+    find(args.ra, args.dec, args.radius, Path(args.outdir),
+         allow_grating=args.grating)

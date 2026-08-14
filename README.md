@@ -20,13 +20,15 @@ This code has seen limited testing.
 
     ra, dec, and radius are in decimal degrees
     outdir is created if it does not exist
+    --grating to include grating observations
 
 This will create
 
     outdir/acisf????_???N???_fov1.fits.gz
     outdir/hrcf????_???N???_fov1.fits.gz
 
-for observations within this cone.
+for observations within this cone. Note that CC mode data is always
+ignored and grating data is ignored by default.
 
 If you have a different way to access this data then that can also
 be used to create a directory of FOV files.
