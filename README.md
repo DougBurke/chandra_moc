@@ -14,15 +14,17 @@ This code has seen limited testing.
 
 # Downloading FOV files
 
+```
 % ./find_chandra_fov ra dec radius outdir
+```
 
-  ra, dec, and radius are in decimal degrees
-  outdir is created if it does not exist
+    ra, dec, and radius are in decimal degrees
+    outdir is created if it does not exist
 
 This will create
 
-  outdir/acisf????_???N???_fov1.fits.gz
-  outdir/hrcf????_???N???_fov1.fits.gz
+    outdir/acisf????_???N???_fov1.fits.gz
+    outdir/hrcf????_???N???_fov1.fits.gz
 
 for observations within this cone.
 
@@ -31,8 +33,10 @@ be used to create a directory of FOV files.
 
 # Create the MOC
 
+```
 % ./make_chandra_moc indir outfile
     --depth 13
+```
 
 This uses all the files that match indir/*_fov1.fits.gz (so it needs the
 gzip-compressed version because I was lazy when writing the script) and
@@ -49,9 +53,9 @@ to try and allow some visualization of the MOC.
 DS9 8.8 beta 1 and later should be able to view MOCs but I have a ticket
 in to them as it currently does not work.
 
-The view_moc(infile, ra0, dec0, fov0, ...) routine will display the MOC
+The `view_moc(infile, ra0, dec0, fov0, ...)` routine will display the MOC
 using matplotlib (this requires that "pip install mocpy[plots]" has been
-run, or the equivalent).
+run, or the equivalent). This is very specific to the test case I used.
 
 I ran a search for FOV files around SNR 1987A and the plots below compare
 the depths of 9 and 13:
@@ -78,3 +82,29 @@ and then
 ```
 
 ![depth 13](depth13.png)
+
+
+# Overlaying on an image
+
+You can try overlapping the MOC on an image - such as the output
+of `flux_image` with something like:
+
+```python
+from astropy.wcs import WCS
+from mocpy import MOC
+from astropy.io import fits
+
+hdus = fits.open("fimg/broad_flux.img")
+wcs = WCS(header=hdus[0].header)
+fig = plt.figure(figsize=(10, 10))
+wcs = WCS(header=hdus[0].header)
+ax = fig.add_subplot(1, 1, 1, projection=wcs)
+im = ax.imshow(hdus[0].data, origin="lower", norm="log")
+
+moc13 = MOC.load("single13.fits")
+moc13.fill(ax=ax, wcs=wcs, alpha=0.3, color="red")
+moc14 = MOC.load("single14.fits")
+moc12 = MOC.load("single12.fits")
+moc12.fill(ax=ax, wcs=wcs, alpha=0.2, color="orange")
+moc14.fill(ax=ax, wcs=wcs, alpha=0.2, color="green")
+```
